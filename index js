@@ -1,0 +1,82 @@
+const { Client, GatewayIntentBits, EmbedBuilder } = require("discord.js");
+const fs = require("fs");
+
+const TOKEN = "MTQ3ODA1MTU0NTUzMzY0OTExMQ.GakAkh.hbUiH8-XEyWCK1Jthg8S5tHG0E_Xgu8hvFPfJs";
+const GUILD_ID = "1474908891471937536";
+const CHANNEL_ID = "1478010232662786068";
+
+const client = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildInvites
+  ]
+});
+
+const filePath = "./data/invite.json";
+
+if (!fs.existsSync("./data")) fs.mkdirSync("./data");
+if (!fs.existsSync(filePath)) fs.writeFileSync(filePath, JSON.stringify({}));
+
+let inviteData = JSON.parse(fs.readFileSync(filePath));
+
+const invites = new Map();
+
+client.once("ready", async () => {
+
+  const guild = client.guilds.cache.get(GUILD_ID);
+  if (!guild) return console.log("Guild not found");
+
+  const guildInvites = await guild.invites.fetch();
+  invites.set(guild.id, guildInvites);
+
+  console.log(`Logged in as ${client.user.tag}`);
+});
+
+client.on("inviteCreate", async (invite) => {
+  const guildInvites = await invite.guild.invites.fetch();
+  invites.set(invite.guild.id, guildInvites);
+});
+
+client.on("guildMemberAdd", async (member) => {
+
+  if (member.guild.id !== GUILD_ID) return;
+
+  const channel = member.guild.channels.cache.get(CHANNEL_ID);
+  if (!channel) return;
+
+  const newInvites = await member.guild.invites.fetch();
+  const oldInvites = invites.get(member.guild.id);
+
+  const invite = newInvites.find(i => oldInvites.get(i.code)?.uses < i.uses);
+
+  invites.set(member.guild.id, newInvites);
+
+  if (!invite) return;
+
+  const inviter = invite.inviter;
+
+  if (!inviteData[inviter.id]) inviteData[inviter.id] = 0;
+  inviteData[inviter.id]++;
+
+  fs.writeFileSync(filePath, JSON.stringify(inviteData, null, 2));
+
+  const embed = new EmbedBuilder()
+    .setColor("Green")
+    .setTitle("📩 Member Joined")
+    .setDescription(
+      `👤 **User:** ${member}\n` +
+      `📨 **Invited By:** <@${inviter.id}>\n` +
+      `🔢 **Total Invites:** ${inviteData[inviter.id]}`
+    )
+    .setThumbnail(member.user.displayAvatarURL())
+    .setTimestamp();
+
+  channel.send({
+    content: `${member} invited by <@${inviter.id}>`,
+    embeds: [embed]
+  });
+
+});
+
+client.login(TOKEN);
