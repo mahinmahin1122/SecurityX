@@ -1,9 +1,11 @@
 const { Client, GatewayIntentBits, EmbedBuilder } = require("discord.js");
 const fs = require("fs");
 
+// ==================== BOT CONFIG ====================
 const TOKEN = "MTQ3ODA1MTU0NTUzMzY0OTExMQ.GakAkh.hbUiH8-XEyWCK1Jthg8S5tHG0E_Xgu8hvFPfJs";
 const GUILD_ID = "1474908891471937536";
 const CHANNEL_ID = "1478010232662786068";
+// =====================================================
 
 const client = new Client({
   intents: [
@@ -13,15 +15,17 @@ const client = new Client({
   ]
 });
 
-const filePath = "./data/invite.json";
+const filePath = "./invite.json"; // Root folder e save hobe
 
-if (!fs.existsSync("./data")) fs.mkdirSync("./data");
+// invite.json create if not exists
 if (!fs.existsSync(filePath)) fs.writeFileSync(filePath, JSON.stringify({}));
 
+// load previous invite data
 let inviteData = JSON.parse(fs.readFileSync(filePath));
 
 const invites = new Map();
 
+// ==================== READY EVENT ====================
 client.once("ready", async () => {
 
   const guild = client.guilds.cache.get(GUILD_ID);
@@ -30,14 +34,16 @@ client.once("ready", async () => {
   const guildInvites = await guild.invites.fetch();
   invites.set(guild.id, guildInvites);
 
-  console.log(`Logged in as ${client.user.tag}`);
+  console.log(`✅ Logged in as ${client.user.tag}`);
 });
 
+// ==================== INVITE CREATE EVENT ====================
 client.on("inviteCreate", async (invite) => {
   const guildInvites = await invite.guild.invites.fetch();
   invites.set(invite.guild.id, guildInvites);
 });
 
+// ==================== MEMBER JOIN EVENT ====================
 client.on("guildMemberAdd", async (member) => {
 
   if (member.guild.id !== GUILD_ID) return;
@@ -56,6 +62,7 @@ client.on("guildMemberAdd", async (member) => {
 
   const inviter = invite.inviter;
 
+  // save invite count
   if (!inviteData[inviter.id]) inviteData[inviter.id] = 0;
   inviteData[inviter.id]++;
 
@@ -79,4 +86,5 @@ client.on("guildMemberAdd", async (member) => {
 
 });
 
+// ==================== LOGIN BOT ====================
 client.login(TOKEN);
